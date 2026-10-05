@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemesh>
+    <!-- Thư mục chứa decorators -->
+    <decorator-prefix>/WEB-INF/decorators/</decorator-prefix>
+
+    <!-- 1. Layout cho trang Quản trị Admin -->
+    <mapping path="/admin/*" name="admin" decorator="admin.jsp"/>
+
+    <!-- 2. Layout cho toàn bộ trang Web người dùng -->
+    <mapping path="/*" name="web" decorator="web.jsp"/>
+
+    <!-- 3. Loại trừ các trang không dùng Decorator -->
+    <mapping path="/login" exclude="true"/>
+    <mapping path="/register" exclude="true"/>
+    <mapping path="/verify-otp" exclude="true"/>
+    <mapping path="/resend-otp" exclude="true"/>
+    <mapping path="/index.jsp" exclude="true"/>
+</sitemesh>
