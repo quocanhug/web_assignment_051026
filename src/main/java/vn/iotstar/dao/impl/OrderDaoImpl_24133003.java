@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Comparator;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.Map;
 import vn.iotstar.connection.DBConnection_24133003;
 import vn.iotstar.model.*;
 
@@ -91,6 +94,7 @@ public class OrderDaoImpl_24133003 {
                 order.phone = rs.getString("phone"); order.address = rs.getNString("address");
                 order.note = rs.getNString("note"); order.total = rs.getBigDecimal("total");
                 order.createdAt = rs.getTimestamp("created_at");
+                order.status = OrderStatus_24133003.valueOf(rs.getString("order_status"));
             }
             try (PreparedStatement detail = conn.prepareStatement("SELECT * FROM order_items WHERE order_id = ? ORDER BY book_id")) {
                 detail.setLong(1, orderId);
@@ -101,5 +105,44 @@ public class OrderDaoImpl_24133003 {
             }
             return order;
         }
+    }
+
+    public Map<OrderStatus_24133003, Integer> countForUser(int userId) throws Exception {
+        Map<OrderStatus_24133003, Integer> counts = new EnumMap<>(OrderStatus_24133003.class);
+        for (OrderStatus_24133003 status : OrderStatus_24133003.values()) counts.put(status, 0);
+        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
+                "SELECT order_status, COUNT(*) AS total FROM orders WHERE user_id=? GROUP BY order_status")) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) counts.put(OrderStatus_24133003.valueOf(rs.getString("order_status")), rs.getInt("total"));
+            }
+        }
+        return counts;
+    }
+
+    public List<Order_24133003> findHistory(int userId, OrderStatus_24133003 status, int page, int pageSize) throws Exception {
+        if (page < 1 || pageSize < 1 || pageSize > 100) throw new IllegalArgumentException("Phân trang không hợp lệ.");
+        List<Order_24133003> result = new ArrayList<>();
+        String sql = "SELECT o.*, (SELECT SUM(CAST(i.quantity AS BIGINT)) FROM order_items i WHERE i.order_id=o.order_id) AS total_quantity "
+                + "FROM orders o WHERE o.user_id=?" + (status == null ? "" : " AND o.order_status=?")
+                + " ORDER BY o.created_at DESC, o.order_id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            int index = 1;
+            ps.setInt(index++, userId);
+            if (status != null) ps.setString(index++, status.name());
+            ps.setLong(index++, (long) (page - 1) * pageSize);
+            ps.setInt(index, pageSize);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Order_24133003 order = new Order_24133003();
+                    order.id = rs.getLong("order_id"); order.recipient = rs.getNString("recipient");
+                    order.total = rs.getBigDecimal("total"); order.createdAt = rs.getTimestamp("created_at");
+                    order.status = OrderStatus_24133003.valueOf(rs.getString("order_status"));
+                    order.totalQuantity = rs.getLong("total_quantity");
+                    result.add(order);
+                }
+            }
+        }
+        return result;
     }
 }

@@ -252,4 +252,58 @@ public class CheckoutIT {
             assertTrue(get("/cart").body().contains("value=\"2\" min=\"1\""));
         } finally { execute("DROP TRIGGER fail_http_items"); }
     }
+    private long historyOrder(OrderStatus_24133003 status, int user) throws Exception {
+        long id=orders.createCod(user,cart(1),shipping,UUID.randomUUID().toString());
+        execute("UPDATE orders SET order_status='"+status.name()+"' WHERE order_id="+id);
+        return id;
+    }
+    @Test public void historyRequiresLoginAndHandlesEmptyState() throws Exception {
+        assertEquals(302,get("/orders").statusCode());
+        HttpResponse<String> auth=post("/login",Map.of("email","user@gmail.com","passwd","123456"));
+        assertTrue(auth.headers().firstValue("location").orElseThrow().endsWith("/orders"));
+        String html=get("/orders").body(); assertTrue(html.contains("Bạn chưa có đơn hàng nào"));
+        assertFalse(html.contains("Vui lòng đăng nhập để xem lịch sử"));
+        assertTrue(get("/orders?status=RETURNED").body().contains("Chưa có đơn hàng ở trạng thái này"));
+    }
+    @Test public void allEightFiltersAndDatabaseChangesAreVisible() throws Exception {
+        Map<OrderStatus_24133003,Long> ids=new EnumMap<>(OrderStatus_24133003.class);
+        for(OrderStatus_24133003 status:OrderStatus_24133003.values()) ids.put(status,historyOrder(status,2));
+        login(); String all=get("/orders").body(); assertTrue(all.contains("Tất cả (8)"));
+        for(OrderStatus_24133003 status:OrderStatus_24133003.values()) {
+            String html=get("/orders?status="+status.name()).body();
+            assertTrue(status.name(),html.contains("data-order-id=\""+ids.get(status)+"\""));
+            assertTrue(html.contains(status.getLabel()+" (1)"));
+            for(var entry:ids.entrySet()) if(entry.getKey()!=status) assertFalse(html.contains("data-order-id=\""+entry.getValue()+"\""));
+            assertEquals(status,orders.findForUser(ids.get(status),2).getStatus());
+            assertTrue(get("/order?id="+ids.get(status)).body().contains("<strong>"+status.getLabel()+"</strong>"));
+        }
+        long changed=ids.get(OrderStatus_24133003.PENDING);
+        execute("UPDATE orders SET order_status='DELIVERED' WHERE order_id="+changed);
+        String pending=get("/orders?status=PENDING").body(); assertFalse(pending.contains("data-order-id=\""+changed+"\""));
+        String delivered=get("/orders?status=DELIVERED").body(); assertTrue(delivered.contains("data-order-id=\""+changed+"\""));
+        assertTrue(delivered.contains("Đã giao (2)"));
+        assertTrue(get("/order?id="+changed).body().contains("<strong>Đã giao</strong>"));
+    }
+    @Test public void historyPaginationAndUserIsolation() throws Exception {
+        execute("UPDATE books SET quantity=30 WHERE bookid="+bookId);
+        long first=0,last=0;
+        for(int i=0;i<11;i++) { last=historyOrder(OrderStatus_24133003.CONFIRMED,2); if(i==0)first=last; }
+        long other=historyOrder(OrderStatus_24133003.CONFIRMED,1);
+        login(); String page1=get("/orders?status=CONFIRMED").body();
+        assertTrue(page1.contains("Tất cả (11)")); assertTrue(page1.contains("Đã xác nhận (11)"));
+        assertTrue(page1.contains("data-order-id=\""+last+"\"")); assertFalse(page1.contains("data-order-id=\""+first+"\""));
+        assertFalse(page1.contains("data-order-id=\""+other+"\""));
+        String page2=get("/orders?status=CONFIRMED&page=2").body(); assertTrue(page2.contains("data-order-id=\""+first+"\""));
+        assertFalse(page2.contains("data-order-id=\""+last+"\""));
+        assertTrue(get("/orders?status=CONFIRMED&page=2147483647").body().contains("Trang 2/2"));
+        assertEquals(404,get("/order?id="+other).statusCode());
+    }
+    @Test public void historyRejectsInvalidFiltersAndDatabaseStatuses() throws Exception {
+        login();
+        for(String path:List.of("/orders?status=INVALID","/orders?status=PENDING%27","/orders?page=0","/orders?page=-1","/orders?page=abc"))
+            assertEquals(path,400,get(path).statusCode());
+        long id=historyOrder(OrderStatus_24133003.PENDING,2);
+        assertThrows(SQLException.class,()->execute("UPDATE orders SET order_status='INVALID' WHERE order_id="+id));
+        assertEquals(OrderStatus_24133003.PENDING,orders.findForUser(id,2).getStatus());
+    }
 }

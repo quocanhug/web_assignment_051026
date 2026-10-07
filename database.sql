@@ -141,7 +141,7 @@ BEGIN
         note NVARCHAR(1000) NOT NULL DEFAULT N'',
         payment_method VARCHAR(10) NOT NULL DEFAULT 'COD' CHECK (payment_method = 'COD'),
         payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID' CHECK (payment_status = 'UNPAID'),
-        order_status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (order_status = 'PENDING'),
+        order_status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CONSTRAINT CK_orders_status CHECK (order_status IN ('PENDING','CONFIRMED','PREPARING','SHIPPING','OUT_FOR_DELIVERY','DELIVERED','CANCELLED','RETURNED')),
         total DECIMAL(19,2) NOT NULL CHECK (total >= 0),
         created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
     );

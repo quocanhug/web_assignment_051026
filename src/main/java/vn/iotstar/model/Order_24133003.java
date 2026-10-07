@@ -10,6 +10,8 @@ public class Order_24133003 {
     public String recipient, phone, address, note;
     public BigDecimal total;
     public Timestamp createdAt;
+    public OrderStatus_24133003 status;
+    public long totalQuantity;
     public List<Item> items = new ArrayList<>();
     public long getId() { return id; }
     public String getRecipient() { return recipient; }
@@ -18,6 +20,8 @@ public class Order_24133003 {
     public String getNote() { return note; }
     public BigDecimal getTotal() { return total; }
     public Timestamp getCreatedAt() { return createdAt; }
+    public OrderStatus_24133003 getStatus() { return status; }
+    public long getTotalQuantity() { return totalQuantity; }
     public List<Item> getItems() { return items; }
     public static class Item {
         private final String title;

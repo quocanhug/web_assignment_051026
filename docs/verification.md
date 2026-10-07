@@ -42,3 +42,7 @@ Chưa gửi OTP tới email thật vì cần cấu hình SMTP riêng. Các trang
 COD hiện hỗ trợ tạo và xác nhận đơn, với phí giao hàng 0 VNĐ. Chưa có màn hình vận hành chuyển trạng thái giao hàng, ghi nhận thu tiền, hủy đơn hoặc hoàn kho.
 
 Thông tin mật khẩu SMTP từng xuất hiện trực tiếp trong mã cũ cần được chủ tài khoản thay mới. Các mật khẩu thật, cấu hình local, log, ảnh kiểm tra và bản build không được đưa lên repository.
+
+## Bổ sung ngày 07/10/2026
+
+Đã thêm lịch sử đặt hàng với 8 trạng thái và phân trang. Chạy `mvn -B clean verify -Pintegration` thành công với 39 tests (14 unit, 25 integration), không lỗi hoặc bỏ qua. Đã đổi trạng thái trực tiếp trong SQL Server và xác nhận bộ lọc, số đếm, trang chi tiết cập nhật sau khi tải lại. Xem [báo cáo lịch sử đặt hàng](order-history.md) và hướng dẫn SQL trong [README](../README.md#lịch-sử-đặt-hàng).

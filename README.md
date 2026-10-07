@@ -6,7 +6,7 @@
 
 1. Cài JDK 21 trở lên, Maven, SQL Server và Tomcat 10.1.
 2. Với database mới, chạy `database.sql` trong SQL Server Management Studio hoặc `sqlcmd`. Script tạo database `WebExamDB` và dữ liệu mẫu; không chạy lại trên database đang có.
-3. Với database cũ, chạy lần lượt các script `001_cod_orders.sql`, `002_password_hash.sql`, `003_unicode_catalog.sql` trong `database/migrations` trên database đó. Không cần tạo lại dữ liệu.
+3. Với database cũ, chạy lần lượt các script `001_cod_orders.sql`, `002_password_hash.sql`, `003_unicode_catalog.sql`, `004_order_statuses.sql` trong `database/migrations` trên database đó. Không cần tạo lại dữ liệu.
 4. Cấu hình các biến môi trường như `.env.example` **trong tiến trình khởi động Tomcat**. Ứng dụng không tự đọc `.env`. Có thể dùng Java system properties cùng tên. Không đưa mật khẩu thật vào Git.
 5. Chạy `mvn clean verify`, chép `target/kiemtraweb.war` vào thư mục `webapps` của Tomcat và mở `http://localhost:8080/kiemtraweb/`.
 
@@ -38,7 +38,39 @@ Tài khoản mẫu: `admin@gmail.com / 123456`, `user@gmail.com / 123456`. Đây
 - Token đặt hàng duy nhất chống gửi trùng; sửa giỏ làm hết hiệu lực biểu mẫu thanh toán cũ.
 - Trang `/order?id=...` chỉ cho chủ đơn xem. Tên/giá/số lượng sách được lưu tại thời điểm đặt, giữ nguyên khi sách bị sửa hoặc xóa.
 
-Chưa có quy trình vận hành cập nhật trạng thái giao hàng/thu tiền COD, hủy đơn hoặc hoàn kho; phạm vi hiện tại là tạo đơn COD và xác nhận cho khách.
+## Lịch sử đặt hàng
+
+Đăng nhập và chọn **Lịch sử đặt hàng** trên menu hoặc mở `/orders`. Có bộ lọc Tất cả và 8 trạng thái, số đơn ở từng trạng thái, phân trang 10 đơn/trang và liên kết xem chi tiết. Mỗi tài khoản chỉ thấy đơn của mình. Tải lại trang sau khi cập nhật SQL để đọc trạng thái mới từ database.
+
+| Giá trị `orders.order_status` | Hiển thị |
+| --- | --- |
+| `PENDING` | Đơn hàng mới |
+| `CONFIRMED` | Đã xác nhận |
+| `PREPARING` | Chuẩn bị hàng |
+| `SHIPPING` | Vận chuyển |
+| `OUT_FOR_DELIVERY` | Giao hàng |
+| `DELIVERED` | Đã giao |
+| `CANCELLED` | Đơn hàng hủy |
+| `RETURNED` | Đơn hàng hoàn |
+
+Chạy `database/demo/order_history.sql` trên database local sau migration 004 để tạo 8 đơn minh họa cho tài khoản `user@gmail.com / 123456`. Script chạy lại không tạo thêm đơn mẫu, không trừ kho và đánh dấu đơn mẫu trong cột `note`. Với `sqlcmd`, dùng `-f 65001` để đọc file UTF-8 đúng dấu tiếng Việt:
+
+```powershell
+sqlcmd -S localhost -E -C -b -f 65001 -d WebExamDB -i database/demo/order_history.sql
+```
+
+Ví dụ đổi trạng thái một đơn minh họa trong SQL Server rồi tải lại `/orders`:
+
+```sql
+UPDATE dbo.orders
+SET order_status = 'DELIVERED'
+WHERE user_id = (SELECT id FROM dbo.users WHERE email = 'user@gmail.com')
+  AND note LIKE N'[[]DEMO_HISTORY:PENDING]%';
+```
+
+Chuyển lại `'PENDING'` bằng cùng câu lệnh để đưa đơn mẫu về bộ lọc Đơn hàng mới. Có thể thay bằng bất kỳ mã trạng thái trong bảng trên. Đơn đặt COD thực tế luôn bắt đầu ở `PENDING`.
+
+Việc đổi `order_status` trực tiếp chỉ thay trạng thái hiển thị; không tự thu tiền, hoàn tiền hoặc hoàn kho. Chưa có quy trình vận hành các thao tác này hoặc màn hình quản trị chuyển trạng thái.
 
 ## Kiểm thử
 

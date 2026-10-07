@@ -47,7 +47,10 @@ public class LoginController_24133003 extends HttpServlet {
             session.setAttribute("user", user);
             session.setAttribute("success", "Đăng nhập thành công! Xin chào " + (user.getFullname() != null ? user.getFullname() : user.getEmail()));
 
-            if (Boolean.TRUE.equals(session.getAttribute("returnToCheckout"))) {
+            if (Boolean.TRUE.equals(session.getAttribute("returnToOrders"))) {
+                session.removeAttribute("returnToOrders");
+                resp.sendRedirect(req.getContextPath() + "/orders");
+            } else if (Boolean.TRUE.equals(session.getAttribute("returnToCheckout"))) {
                 session.removeAttribute("returnToCheckout");
                 resp.sendRedirect(req.getContextPath() + "/cart/checkout");
             } else if (user.isAdmin()) {

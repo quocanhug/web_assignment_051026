@@ -35,6 +35,9 @@
                         </c:if>
                     </a>
                 </li>
+                <c:if test="${not empty sessionScope.user}">
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-3" href="${pageContext.request.contextPath}/orders"><i class="bi bi-clock-history me-1"></i>Lịch sử đặt hàng</a></li>
+                </c:if>
                 <!-- Chỉ hiển thị menu Trang quản trị khi người dùng là Admin -->
                 <c:if test="${not empty sessionScope.user and sessionScope.user.isAdmin()}">
                     <li class="nav-item">
@@ -59,6 +62,7 @@
                                 <li class="dropdown-header text-muted">
                                     Vai trò: <strong>${sessionScope.user.isAdmin() ? 'Quản trị viên (Admin)' : 'Người dùng (User)'}</strong>
                                 </li>
+                                <li><a class="dropdown-item" href="${pageContext.request.contextPath}/orders"><i class="bi bi-clock-history me-2"></i>Lịch sử đặt hàng</a></li>
                                 <c:if test="${sessionScope.user.isAdmin()}">
                                     <li><a class="dropdown-item" href="${pageContext.request.contextPath}/admin/books"><i class="bi bi-speedometer2 me-2 text-primary"></i>Quản lý Sách</a></li>
                                     <li><hr class="dropdown-divider"></li>
